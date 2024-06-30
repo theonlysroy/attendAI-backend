@@ -77,4 +77,4 @@ studentSchema.methods.isPasswordCorrect = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 
-export const Student = mongoose.model("Student", studentSchema);
+export default mongoose.model("Student", studentSchema);

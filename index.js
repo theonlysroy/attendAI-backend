@@ -3,7 +3,7 @@ import connectDB from "./src/db/index.js";
 import { app } from "./app.js";
 import { initFaceAPI } from "./src/utils/faceRecognition.js";
 dotenv.config({
-  path: "./.env",
+  path: ".env",
 });
 const port = process.env.PORT || 3000;
 

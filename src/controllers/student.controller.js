@@ -1,28 +1,38 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { matchFace, registerFace } from "../utils/faceRecognition.js";
+import { matchFace, getFaceDescriptors } from "../utils/faceRecognition.js";
 import fs from "node:fs";
 import { Student } from "../models/student.model.js";
+import { Face } from "../models/face.model.js";
 
 const register_student = asyncHandler(async (req, res) => {
-  // get user details (name, email, collegeRollNo, photo, password) => must
-  // validation => not empty and correct format
-  // check if student already exists: collegeRollNo, email
-  // check for images => must
-  // if not exit
-  // upload the image => process it for face recognition
-  // create user object -> create entry in db
-  // remove password and refresh token field from response
-  // check for user creation
-  // return result
-
-  const { fullName, email, collegeRollNo, password } = req.body;
+  const {
+    fullName,
+    email,
+    password,
+    address,
+    contactNo,
+    department,
+    session,
+    uniRollNo,
+    uniRegdNo,
+    collegeRollNo,
+  } = req.body;
 
   if (
-    [fullName, email, collegeRollNo, password].some(
-      (field) => field?.trim() === ""
-    )
+    [
+      fullName,
+      email,
+      password,
+      address,
+      contactNo,
+      department,
+      session,
+      uniRollNo,
+      uniRegdNo,
+      collegeRollNo,
+    ].some((field) => field?.trim() === "")
   ) {
     throw new ApiError(400, "All fields are required");
   }
@@ -31,39 +41,137 @@ const register_student = asyncHandler(async (req, res) => {
     $or: [{ collegeRollNo }, { email }],
   });
   if (existedStudent) {
-    throw new ApiError(400, "student with college roll number already exists");
+    throw new ApiError(400, [], "student with college roll already exists");
   }
 
   const avatarLocalPath = req.file?.path;
   if (!avatarLocalPath) {
     throw new ApiError(400, "Image file is required");
   }
-  let faceEncoding = null;
-  try {
-    faceEncoding = await registerFace(avatarLocalPath, collegeRollNo);
-    if (!faceEncoding) {
-      return ApiError(400, "No face detected in the image");
-    }
-    fs.rmSync(avatarLocalPath, (err) => {
-      if (err) console.error(`Error deleting file: ${err}`);
-    });
-  } catch (error) {
-    console.error(`Error registering student: ${error}`);
+  const faceData = await getFaceDescriptors(avatarLocalPath);
+  if (!faceData) {
+    throw new ApiError(400, "No face detected in the image");
   }
-
-  return res
-    .status(201)
-    .json(new ApiResponse(200, faceEncoding, "Image encoded successfully"));
+  const faceDescriptor = await Face.create({ face_descriptor: faceData });
+  if (!faceDescriptor) {
+    throw new ApiError(400, "Database error");
+  }
+  const student = await Student.create({
+    fullName,
+    email,
+    faceDescriptor,
+    password,
+    address,
+    contactNo,
+    department,
+    collegeRollNo,
+    uniRollNo,
+    uniRegdNo,
+    regdDate,
+  });
+  const createStudent = await Student.findById(student._id).select(
+    "-password -refreshToken"
+  );
+  if (!createStudent) {
+    throw new ApiError(400, "something went wrong while registering student");
+  }
+  res.status(201).json(new ApiResponse(200, "Student registered successfully"));
 });
 
 const login_student = asyncHandler(async (req, res) => {
   const { collegeRollNo } = req.body;
   const imageFile = req.file?.path;
-  const faceResult = await matchFace(imageFile);
-  if (faceResult._distance < 0.6) {
-    return res.status(200).json(new ApiResponse(200, "Login successful"));
+  if (!imageFile) {
+    throw new ApiError(400, [], "Image file is required");
+  }
+  const studentData = await Student.aggregate([
+    {
+      $match: {
+        collegeRollNo: `${collegeRollNo}`,
+      },
+    },
+    {
+      $lookup: {
+        from: "faces",
+        localField: "faceDescriptor",
+        foreignField: "_id",
+        as: "face_descriptor",
+      },
+    },
+    {
+      $unwind: "$face_descriptor",
+    },
+    {
+      $project: {
+        fullName: "$fullName",
+        faceData: "$face_descriptor",
+      },
+    },
+  ]);
+  if (!studentData.length) {
+    throw new ApiError(400, [], "Student not found");
+  }
+  const id = studentData[0]._id;
+  const fullName = studentData[0].fullName;
+  const faceMatchResults = await matchFace(
+    imageFile,
+    studentData[0].faceData.face_descriptor
+  );
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+  const refreshToken = fullName + id + "REFRESH_TOKEN_SECRET";
+  const accessToken = fullName + id + "ACCESS_TOKEN_SECRET";
+  if (faceMatchResults._distance < 0.6) {
+    return res
+      .status(200)
+      .cookie("refreshToken", refreshToken, options)
+      .cookie("accessToken", accessToken, options)
+      .json(
+        new ApiResponse(
+          200,
+          {
+            student: { id, fullName, faceMatchResults },
+          },
+          "Login successful"
+        )
+      );
   } else {
-    throw new ApiError(400, "Face-id not matched");
+    return res
+      .status(300)
+      .json(
+        new ApiResponse(
+          300,
+          { student: { id, faceMatchResults } },
+          "Face-id not matched"
+        )
+      );
   }
 });
-export { register_student, login_student };
+
+const logout_student = asyncHandler(async (req, res) => {
+  await Student.findByIdAndUpdate(
+    req.student._id,
+    {
+      $unset: {
+        refreshToken: 1, // this removes the field from document
+      },
+    },
+    {
+      new: true,
+    }
+  );
+
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  return res
+    .status(200)
+    .clearCookie("refreshToken", options)
+    .clearCookie("accessToken", options)
+    .json(new ApiResponse(200, {}, "User logged Out"));
+});
+export { register_student, login_student, logout_student };

@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import mongoose, { Schema } from "mongoose";
+import jwt from "jsonwebtoken";
 
 const studentSchema = new Schema(
   {
@@ -15,17 +16,14 @@ const studentSchema = new Schema(
       lowercase: true,
       trim: true,
     },
-    avatar: {
-      type: String, // cloudinary url
+    faceDescriptor: {
+      type: Schema.Types.ObjectId,
+      ref: "Face",
       required: true,
     },
     password: {
       type: String,
       required: [true, "Password is required"],
-    },
-    gurdian: {
-      type: String,
-      trim: true,
     },
     address: {
       type: String,
@@ -53,10 +51,6 @@ const studentSchema = new Schema(
     uniRegdNo: {
       type: String,
     },
-    regdDate: {
-      type: Date,
-      required: true,
-    },
     refreshToken: {
       type: String,
     },
@@ -77,4 +71,29 @@ studentSchema.methods.isPasswordCorrect = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 
-export default mongoose.model("Student", studentSchema);
+studentSchema.methods.generateAccessToken = function () {
+  return jwt.sign(
+    {
+      _id: this._id,
+      fullName: this.fullName,
+      collegeRollNo: this.collegeRollNo,
+    },
+    process.env.ACCESS_TOKEN_SECRET,
+    {
+      expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
+    }
+  );
+};
+studentSchema.methods.generateRefreshToken = function () {
+  return jwt.sign(
+    {
+      _id: this._id,
+    },
+    process.env.REFRESH_TOKEN_SECRET,
+    {
+      expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
+    }
+  );
+};
+
+export const Student = mongoose.model("Student", studentSchema);

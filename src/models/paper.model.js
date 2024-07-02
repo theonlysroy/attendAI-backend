@@ -12,7 +12,7 @@ const paperSchema = new Schema({
     required: true,
   },
   credits: {
-    type: Number,
+    type: String,
     required: true,
   },
 });

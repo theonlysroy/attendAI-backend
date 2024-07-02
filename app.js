@@ -15,13 +15,19 @@ app.use(express.static("public"));
 
 // routes import
 import studentRouter from "./src/routes/student.route.js";
+import paperRouter from "./src/routes/paper.route.js";
+import teacherRouter from "./src/routes/teacher.route.js";
+import routineRouter from "./src/routes/routine.route.js";
 
 // routes declaration
-app.use("/students", studentRouter);
+app.use("/student", studentRouter);
+app.use("/paper", paperRouter);
+app.use("/teacher", teacherRouter);
+app.use("/routine", routineRouter);
 
 app.get("/", (req, res) => {
   res.json({
-    message: "initial project",
+    message: "root route",
     data: "hello world",
     success: true,
   });

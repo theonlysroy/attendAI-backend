@@ -3,8 +3,6 @@ import * as faceapi from "@vladmandic/face-api";
 import fs from "node:fs";
 import { join } from "node:path";
 import { BASE_PATH } from "../../module-alias.config.js";
-import Face from "../models/face.model.js";
-import Student from "../models/student.model.js";
 import { ApiError } from "./ApiError.js";
 
 let optionsSSDMobileNet;
@@ -28,41 +26,20 @@ async function initFaceAPI() {
 async function getFaceDescriptors(imagePath) {
   const buffer = fs.readFileSync(imagePath);
   const tensor = tfjs.node.decodeImage(buffer, 3);
-  const face = await faceapi
+  const faceDescriptor = await faceapi
     .detectSingleFace(tensor, optionsSSDMobileNet)
     .withFaceLandmarks()
     .withFaceDescriptor();
 
-  return face;
-}
-
-// register the face with college roll no in the database
-async function registerFace(imagePath, collegeRollNo) {
-  const faceDescriptor = await getFaceDescriptors(imagePath);
-  let face = null;
-  if (faceDescriptor) {
-    face = Face.create({
-      collegeRollNo,
-      face_descriptor: faceDescriptor,
-    });
-  }
-  return face;
+  return faceDescriptor.descriptor;
 }
 
 // match the face with the database encodings
-async function matchFace(inputFile) {
-  let face = await Face.findOne({ collegeRollNo });
-  let student = await Student.findOne({ collegeRollNo });
-  if (!face) {
-    throw new ApiError(400, "Student not found");
-  }
-  face.face_descriptor = new Float32Array(Object.values(face.face_descriptor));
-  face = new faceapi.LabeledFaceDescriptors(student.fullName, [
-    face.face_descriptor,
-  ]);
-  const matcher = new faceapi.FaceMatcher(face, thresholdDistance);
-  const newDescriptor = await getFaceDescriptors(inputFile);
-  const result = await matcher.findBestMatch(newDescriptor);
+async function matchFace(inputFile, faceDescriptor) {
+  faceDescriptor = new Float32Array(Object.values(faceDescriptor));
+  const matcher = new faceapi.FaceMatcher(faceDescriptor, thresholdDistance);
+  const inputImageDescriptor = await getFaceDescriptors(inputFile);
+  const result = await matcher.findBestMatch(inputImageDescriptor);
   return result;
 }
-export { initFaceAPI, registerFace, matchFace };
+export { initFaceAPI, getFaceDescriptors, matchFace };

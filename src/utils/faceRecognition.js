@@ -34,6 +34,16 @@ async function getFaceDescriptors(imagePath) {
   return faceDescriptor.descriptor;
 }
 
+async function getFaceDescriptorsFromBinaryData(base64ImageData) {
+  const base64Image = base64ImageData.replace(/^data:image\/\w+;base64,/, "");
+  const faceDescriptor = await faceapi
+    .detectSingleFace(img, optionsSSDMobileNet)
+    .withFaceLandmarks()
+    .withFaceDescriptor();
+
+  return faceDescriptor.descriptor;
+}
+
 // match the face with the database encodings
 async function matchFace(inputFile, faceDescriptor) {
   faceDescriptor = new Float32Array(Object.values(faceDescriptor));
@@ -42,4 +52,9 @@ async function matchFace(inputFile, faceDescriptor) {
   const result = await matcher.findBestMatch(inputImageDescriptor);
   return result;
 }
-export { initFaceAPI, getFaceDescriptors, matchFace };
+export {
+  initFaceAPI,
+  getFaceDescriptors,
+  matchFace,
+  getFaceDescriptorsFromBinaryData,
+};

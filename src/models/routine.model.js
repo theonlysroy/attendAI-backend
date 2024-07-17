@@ -24,14 +24,17 @@ const routineSchema = new Schema({
     type: Date,
     required: true,
   },
+  subject: {
+    type: String,
+    required: true,
+    default: "Comp Sc",
+  },
   paperCode: {
-    type: Schema.Types.ObjectId,
-    ref: "Paper",
+    type: String,
     required: true,
   },
   teacher: {
-    type: Schema.Types.ObjectId,
-    ref: "Teacher",
+    type: String,
     required: true,
   },
 });

@@ -7,6 +7,7 @@ import { Student } from "../models/student.model.js";
 import { Face } from "../models/face.model.js";
 
 const register_student = asyncHandler(async (req, res) => {
+  console.log(req.body);
   const {
     fullName,
     email,
@@ -41,7 +42,10 @@ const register_student = asyncHandler(async (req, res) => {
     $or: [{ collegeRollNo }, { email }],
   });
   if (existedStudent) {
-    throw new ApiError(400, [], "student with college roll already exists");
+    // throw new ApiError(400, [], "student with college roll already exists");
+    res
+      .status(400)
+      .json({ message: "student with college roll already exists" });
   }
 
   const avatarLocalPath = req.file?.path;
@@ -67,7 +71,6 @@ const register_student = asyncHandler(async (req, res) => {
     collegeRollNo,
     uniRollNo,
     uniRegdNo,
-    regdDate,
   });
   const createStudent = await Student.findById(student._id).select(
     "-password -refreshToken"

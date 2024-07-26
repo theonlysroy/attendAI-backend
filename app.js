@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import fs from "node:fs";
+import { specs, swaggerUi } from "./swagger.js";
 
 const app = express();
 app.use(
@@ -15,6 +16,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(express.static("public"));
 app.use(bodyParser.json());
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(specs));
 
 // routes import
 import studentRouter from "./src/routes/student.route.js";
@@ -24,6 +26,7 @@ import routineRouter from "./src/routes/routine.route.js";
 import faceDataRouter from "./src/routes/faceData.route.js";
 import attendanceRouter from "./src/routes/attendance.route.js";
 import { getFaceDescriptorsFromBinaryData } from "./src/utils/faceRecognition.js";
+import noticeRouter from "./src/routes/notice.route.js";
 
 // routes declaration
 app.use("/auth", studentRouter);
@@ -32,6 +35,7 @@ app.use("/teacher", teacherRouter);
 app.use("/routine", routineRouter);
 app.use("/faceData", faceDataRouter);
 app.use("/attendance", attendanceRouter);
+app.use("/notice", noticeRouter);
 
 app.get("/", (req, res) => {
   res.json({
@@ -39,30 +43,6 @@ app.get("/", (req, res) => {
     data: "hello world",
     success: true,
   });
-});
-
-app.post("/testupload", async (req, res) => {
-  const image = req.body.image;
-  console.log(typeof image);
-  // const imageName = `${Date.now().toString()}.png`;
-  // const imagePath = `./public/uploads/${imageName}`;
-  // const imageBuffer = Buffer.from(
-  //   image.replace(/^data:image\/\w+;base64,/, ""),
-  //   "base64"
-  // );
-
-  // fs.writeFile(imagePath, imageBuffer, (err) => {
-  //   if (err) {
-  //     console.error("Error saving image:", err);
-  //     res.status(500).json({ message: "Error saving image" });
-  //   } else {
-  //     console.log("Image saved:", imageName);
-  //   }
-  // });
-
-  const imageData = await getFaceDescriptorsFromBinaryData(image);
-  console.log(imageData);
-  res.status(200).json({ data: imageData });
 });
 
 export { app };

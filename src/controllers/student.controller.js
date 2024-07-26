@@ -177,4 +177,21 @@ const logout_student = asyncHandler(async (req, res) => {
     .clearCookie("accessToken", options)
     .json(new ApiResponse(200, {}, "User logged Out"));
 });
-export { register_student, login_student, logout_student };
+
+const get_studentData = asyncHandler(async (req, res) => {
+  const { collegeRollNo } = req.query;
+  if (!collegeRollNo) {
+    throw new ApiError(400, [], "collegeRollNo is required");
+  }
+  const studentData = await Student.findOne({ collegeRollNo }).select(
+    "-_id -password -__v -refreshToken -faceDescriptor -email -createdAt -updatedAt"
+  );
+  if (!studentData) {
+    throw new ApiError(400, studentData, "Student not found");
+  }
+  res
+    .status(200)
+    .json(new ApiResponse(200, studentData, "Student data fetched"));
+});
+
+export { register_student, login_student, logout_student, get_studentData };

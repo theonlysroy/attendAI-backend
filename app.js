@@ -38,8 +38,8 @@ app.use("/faceData", faceDataRouter);
 app.use("/attendance", attendanceRouter);
 app.use("/notice", noticeRouter);
 
-/*
 // seeding routine
+/*
 const seedRoutine = async () => {
   const routine = {
     semester: 6,
@@ -105,7 +105,6 @@ const seedRoutine = async () => {
 
 seedRoutine();
 */
-
 app.get("/", (req, res) => {
   res.json({
     message: "root route",

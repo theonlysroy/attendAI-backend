@@ -4,7 +4,10 @@ import fs from "node:fs";
 import { join } from "node:path";
 import { BASE_PATH } from "../../module-alias.config.js";
 import { ApiError } from "./ApiError.js";
+import * as canvas from "canvas";
+import { Image, ImageData, Canvas } from "canvas";
 
+faceapi.env.monkeyPatch({ Canvas, Image, ImageData });
 let optionsSSDMobileNet;
 const minConfidence = 0.1;
 const modelPath = join(BASE_PATH, "public/models");
@@ -34,10 +37,10 @@ async function getFaceDescriptors(imagePath) {
   return faceDescriptor.descriptor;
 }
 
-async function getFaceDescriptorsFromBinaryData(base64ImageData) {
-  const base64Image = base64ImageData.replace(/^data:image\/\w+;base64,/, "");
+async function getFaceDescriptorsFromBinaryData(base64Image) {
+  // const base64Image = base64ImageData.replace(/^data:image\/\w+;base64,/, "");
   const faceDescriptor = await faceapi
-    .detectSingleFace(img, optionsSSDMobileNet)
+    .detectSingleFace(base64Image, optionsSSDMobileNet)
     .withFaceLandmarks()
     .withFaceDescriptor();
 
@@ -45,10 +48,15 @@ async function getFaceDescriptorsFromBinaryData(base64ImageData) {
 }
 
 // match the face with the database encodings
-async function matchFace(inputFile, faceDescriptor) {
+async function matchFace(imageData, faceDescriptor) {
   faceDescriptor = new Float32Array(Object.values(faceDescriptor));
   const matcher = new faceapi.FaceMatcher(faceDescriptor, thresholdDistance);
-  const inputImageDescriptor = await getFaceDescriptors(inputFile);
+
+  const imageBuffer = Buffer.from(imageData.split(",")[1], "base64");
+  const inputImage = await canvas.loadImage(imageBuffer);
+  const inputImageDescriptor =
+    await getFaceDescriptorsFromBinaryData(inputImage);
+
   const result = await matcher.findBestMatch(inputImageDescriptor);
   return result;
 }

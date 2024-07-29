@@ -6,10 +6,10 @@ const options = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "Student Attendance Management",
+      title: "attendAI",
       version: "1.0.0",
       description:
-        "Using Face-Recognition features to automate attendance management",
+        "Smart Attendance Management System using AI Face Recognition",
     },
   },
   apis: ["./src/routes/*.*.js"],

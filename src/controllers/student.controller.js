@@ -4,7 +4,11 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { matchFace, getFaceDescriptors } from "../utils/faceRecognition.js";
 import fs from "node:fs";
 import { Student } from "../models/student.model.js";
+import { Teacher } from "../models/teacher.model.js";
 import { Face } from "../models/face.model.js";
+import jwt from "jsonwebtoken";
+import { Routine } from "../models/class.model.js";
+import { Notice } from "../models/notice.model.js";
 
 const register_student = asyncHandler(async (req, res) => {
   console.log(req.body);
@@ -82,10 +86,9 @@ const register_student = asyncHandler(async (req, res) => {
 });
 
 const login_student = asyncHandler(async (req, res) => {
-  const { collegeRollNo } = req.body;
-  const imageFile = req.file?.path;
-  if (!imageFile) {
-    throw new ApiError(400, [], "Image file is required");
+  const { collegeRollNo, imageData } = req.body;
+  if (!imageData) {
+    throw new ApiError(400, [], "Image data is required");
   }
   const studentData = await Student.aggregate([
     {
@@ -107,6 +110,7 @@ const login_student = asyncHandler(async (req, res) => {
     {
       $project: {
         fullName: "$fullName",
+        collegeRollNo: "$collegeRollNo",
         faceData: "$face_descriptor",
       },
     },
@@ -114,57 +118,48 @@ const login_student = asyncHandler(async (req, res) => {
   if (!studentData.length) {
     throw new ApiError(400, [], "Student not found");
   }
-  const id = studentData[0]._id;
-  const fullName = studentData[0].fullName;
+  // const id = studentData[0]._id;
+  // const fullName = studentData[0].fullName;
   const faceMatchResults = await matchFace(
-    imageFile,
+    imageData,
     studentData[0].faceData.face_descriptor
   );
   const options = {
     httpOnly: true,
     secure: true,
   };
-  const refreshToken = fullName + id + "REFRESH_TOKEN_SECRET";
-  const accessToken = fullName + id + "ACCESS_TOKEN_SECRET";
+  // const refreshToken = fullName + id + "REFRESH_TOKEN_SECRET";
+  // const accessToken = fullName + id + "ACCESS_TOKEN_SECRET";
+  // console.log(studentData[0].collegeRollNo);
+  const accessToken = jwt.sign(
+    { _id: studentData[0]._id, collegeRollNo: studentData[0].collegeRollNo },
+    process.env.ACCESS_TOKEN_SECRET || "attendAI",
+    { expiresIn: process.env.ACCESS_TOKEN_EXPIRY || "1d" }
+  );
   if (faceMatchResults._distance < 0.6) {
     return res
       .status(200)
-      .cookie("refreshToken", refreshToken, options)
       .cookie("accessToken", accessToken, options)
-      .json(
-        new ApiResponse(
-          200,
-          {
-            student: { id, fullName, faceMatchResults },
-          },
-          "Login successful"
-        )
-      );
+      .json(new ApiResponse(200, { student: accessToken }, "Login successful"));
   } else {
     return res
       .status(300)
-      .json(
-        new ApiResponse(
-          300,
-          { student: { id, faceMatchResults } },
-          "Face-id not matched"
-        )
-      );
+      .json(new ApiResponse(300, [], "Face-id not matched"));
   }
 });
 
 const logout_student = asyncHandler(async (req, res) => {
-  await Student.findByIdAndUpdate(
-    req.student._id,
-    {
-      $unset: {
-        refreshToken: 1, // this removes the field from document
-      },
-    },
-    {
-      new: true,
-    }
-  );
+  // await Student.findByIdAndUpdate(
+  //   req.student._id,
+  //   {
+  //     $unset: {
+  //       refreshToken: 1, // this removes the field from document
+  //     },
+  //   },
+  //   {
+  //     new: true,
+  //   }
+  // );
 
   const options = {
     httpOnly: true,
@@ -173,7 +168,6 @@ const logout_student = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .clearCookie("refreshToken", options)
     .clearCookie("accessToken", options)
     .json(new ApiResponse(200, {}, "User logged Out"));
 });
@@ -194,4 +188,27 @@ const get_studentData = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, studentData, "Student data fetched"));
 });
 
-export { register_student, login_student, logout_student, get_studentData };
+const getDashboard = asyncHandler(async (req, res) => {
+  const studentCount = await Student.countDocuments();
+  const teacherCount = await Teacher.countDocuments();
+  const totalClasses = await Routine.countDocuments();
+
+  // console.log(teacherCount, teacherCount, totalClasses);
+  const notices = await Notice.find();
+  return res.status(200).json(
+    new ApiResponse(200, {
+      student: studentCount,
+      teacher: teacherCount,
+      totalClasses: totalClasses,
+      notices: notices,
+    })
+  );
+});
+
+export {
+  register_student,
+  login_student,
+  logout_student,
+  get_studentData,
+  getDashboard,
+};

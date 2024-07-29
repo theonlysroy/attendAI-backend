@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { Routine } from "../models/routine.model.js";
+import { Routine } from "../models/class.model.js";
 import { Paper } from "../models/paper.model.js";
 import { Teacher } from "../models/teacher.model.js";
 
@@ -44,13 +44,65 @@ const create_routine = asyncHandler(async (req, res) => {
   );
 });
 
-const get_routine_by_id = asyncHandler(async (req, res) => {
-  const { id } = req.query;
-  console.log(id);
-  const routine = await Routine.findById(id);
-  console.log(routine);
+const get_routine_by_day = asyncHandler(async (req, res) => {
+  const { semester, day } = req.query;
+  // const lookupStage = {
+  //   $lookup: {
+  //     from: "paper",
+  //     localField: `weekDays.${day}.paperCode`,
+  //     foreignField: "paperCode",
+  //     as: "paperDetails",
+  //   },
+  // };
+  // const aggregateQuery = [
+  //   {
+  //     $match: {
+  //       semester: semester,
+  //     },
+  //   },
+  //   {
+  //     $project: {
+  //       _id: 0,
+  //       [`weekDays.${day}`]: 1,
+  //     },
+  //   },
+  //   {
+  //     $unwind: `$weekDays.${day}`,
+  //   },
+  //   lookupStage,
+  //   {
+  //     $unwind: "$paperDetails",
+  //   },
+  //   {
+  //     $addFields: {
+  //       [`weekDays.${day}.paperName`]: "$paperDetails.paperName",
+  //     },
+  //   },
+  //   {
+  //     $project: {
+  //       [`weekDays.${day}`]: 1,
+  //     },
+  //   },
+  // ];
+
+  const projectQuery = {
+    $project: {
+      _id: 0,
+      [`weekDays.${day}`]: 1,
+    },
+  };
+
+  const aggregateQuery = [
+    {
+      $match: {
+        semester: semester,
+      },
+    },
+    projectQuery,
+  ];
+  const routine = await Routine.aggregate(aggregateQuery);
   if (!routine) {
-    throw new ApiError(400, "Routine not found");
+    throw new ApiError(400, [], "Routine not found");
   }
   res
     .status(200)
@@ -59,28 +111,11 @@ const get_routine_by_id = asyncHandler(async (req, res) => {
 
 const get_routines = asyncHandler(async (req, res) => {
   const routines = await Routine.aggregate([
-    {
-      $lookup: {
-        from: "paper",
-        localField: "paperCode",
-        foreignField: "paperCode",
-        as: "paper",
-      },
-    },
-    {
-      $unwind: {
-        path: "$paper",
-      },
-    },
-    {
-      $addFields: {
-        paperName: "$paper.paperName",
-      },
-    },
+    { $match: { semester: 6 } },
     {
       $project: {
-        paper: 0,
         __v: 0,
+        _id: 0,
       },
     },
   ]);
@@ -136,7 +171,7 @@ const delete_routine = asyncHandler(async (req, res) => {
 export {
   create_routine,
   get_routines,
-  get_routine_by_id,
+  get_routine_by_day,
   update_routine,
   delete_routine,
 };

@@ -27,6 +27,7 @@ import faceDataRouter from "./src/routes/faceData.route.js";
 import attendanceRouter from "./src/routes/attendance.route.js";
 import { getFaceDescriptorsFromBinaryData } from "./src/utils/faceRecognition.js";
 import noticeRouter from "./src/routes/notice.route.js";
+import { Routine } from "./src/models/class.model.js";
 
 // routes declaration
 app.use("/auth", studentRouter);
@@ -36,6 +37,74 @@ app.use("/routine", routineRouter);
 app.use("/faceData", faceDataRouter);
 app.use("/attendance", attendanceRouter);
 app.use("/notice", noticeRouter);
+
+/*
+// seeding routine
+const seedRoutine = async () => {
+  const routine = {
+    semester: 6,
+    weekDays: {
+      Monday: [
+        {
+          startTime: "02:15 PM",
+          endTime: "03:45 PM",
+          semester: 6,
+          paperCode: "CMS-A-CC-6-13-TH",
+          teacher: "OG",
+        },
+        {
+          startTime: "03:45 PM",
+          endTime: "05:15 PM",
+          semester: 6,
+          paperCode: "CMS-A-DSE-B-4-P",
+          teacher: "MP",
+        },
+      ],
+      Tuesday: [
+        {
+          startTime: "01:30 PM",
+          endTime: "03:00 PM",
+          semester: 6,
+          paperCode: "CMS-A-DSE-B-4-TH",
+          teacher: "MP",
+        },
+        {
+          startTime: "03:00 PM",
+          endTime: "04:25 PM",
+          semester: 6,
+          paperCode: "CMS-A-DSE-A-4-P",
+          teacher: "AKG",
+        },
+      ],
+      Wednesday: [],
+      Thursday: [
+        {
+          startTime: "03:00 PM",
+          endTime: "04:25 PM",
+          semester: 6,
+          paperCode: "CMS-A-DSE-B-3-P",
+          teacher: "SB",
+        },
+      ],
+      Friday: [
+        {
+          startTime: "11:00 AM",
+          endTime: "01:30 PM",
+          semester: 6,
+          paperCode: "CMS-A-CC-6-14-TH",
+          teacher: "PS",
+        },
+      ],
+      Saturday: [],
+    },
+  };
+
+  await Routine.deleteMany({});
+  await Routine.create(routine);
+};
+
+seedRoutine();
+*/
 
 app.get("/", (req, res) => {
   res.json({

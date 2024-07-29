@@ -11,8 +11,6 @@ const markAttendance = asyncHandler(async (req, res) => {
     if (!student) {
       throw new ApiError(400, [], "Incorrect college roll");
     }
-    console.log(collegeRollNo);
-    console.log(student);
     const prevAttendance = await Attendance.findOne({ studentID: student._id });
 
     let attendanceDoc;

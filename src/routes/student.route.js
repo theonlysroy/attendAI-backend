@@ -4,10 +4,12 @@ import {
   login_student,
   logout_student,
   get_studentData,
+  getDashboard,
 } from "../controllers/student.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { get_faceData } from "../controllers/faceData.controller.js";
 import { adminLogin } from "../controllers/admin.controller.js";
+import { verifyAccessToken } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
@@ -47,8 +49,9 @@ router.route("/register").post(upload.single("avatar"), register_student);
 router.route("/login").post(upload.single("avatar"), login_student);
 router.route("/admin/login").post(adminLogin);
 router.route("/faceData").get(get_faceData);
-router.route("/studentData").get(get_studentData);
+router.route("/studentData").get(verifyAccessToken, get_studentData);
+router.route("/dashboard").get(verifyAccessToken, getDashboard);
 
 // secured routes
-router.route("/logout").post(logout_student);
+router.route("/logout").post(verifyAccessToken, logout_student);
 export default router;

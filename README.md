@@ -76,6 +76,10 @@ After login, you'll be redirected to the dashboard. Here you can see the student
 
 ---
 
+## Golang rewrite
+
+on branch `go-rewrite` the golang rewrite of this whole application is written.
+
 ## 📝 Author
 
 👤 **Swagatam Roy**

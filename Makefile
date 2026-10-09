@@ -1,6 +1,6 @@
 BINARY := attendai
 BUILD_DIR := bin
-ENTRY_FILE := ./cmd/attendai/
+ENTRY_FILE := ./cmd/api/
 
 .PHONY: run build clean fmt vet test
 
